@@ -1,40 +1,44 @@
 # AELA - Project Progress & Execution State
 
 ## Current Active Phase
-- **Phase 1: Declarative Infrastructure Coding (Weeks 1-2)** (Foundational initialization complete, ready for active IaC resource expansion)
+- **Phase 1: Declarative Infrastructure Coding (Completed)**
+- **Transitioning to Phase 2: Event Stream Integration (Weeks 3-4)**
 
 ## Completed Steps & Exact Techniques/Libraries Used
-1. **Repository Structure & Modular Layout Initialization:**
-   - Created `/infrastructure`, `/src/analytics_engine`, `/src/jit_proxy`, and `/tests/jmeter_plans`.
-2. **Terraform IaC Baseline Setup:**
-   - Set up `providers.tf`, `variables.tf`, `main.tf`, and `outputs.tf` requiring Terraform CLI `>= 1.5.0` and AWS Provider `~> 5.0`.
-   - Scaffolded isolated VPC (`10.0.0.0/16`), isolated subnets, explicit zero-ingress/egress quarantine security group (`aws_security_group`).
-   - Configured base operational IAM role (`aws_iam_role.base_service_role`) and dynamic quarantine Deny isolation role (`aws_iam_role.deny_isolation_role` with explicit wildcard Deny policy).
-   - Scaffolded target EC2 micro instance (`aws_instance.target_test_node`) with IMDSv2 enforced.
-3. **Python 3.11 Environment & Component Scaffolding:**
-   - Initialized `/src/analytics_engine` with `requirements.txt` (`boto3`, `botocore`, `pydantic`, `pytest`), `handler.py` for CloudTrail telemetry stream ingestion and time-decay idle gap calculations.
-   - Initialized `/src/jit_proxy` with `requirements.txt` and `handler.py` integrating Amazon API Gateway and AWS STS `AssumeRole` transient credential leasing.
-4. **Configuration & Version Control Exclusion:**
-   - Configured comprehensive `.gitignore` for Terraform state/locks, Python bytecode/environments, JMeter outputs (`*.jtl`, `jmeter.log`), and local network adapter / virtual bridge configs (Hyper-V / Docker).
-5. **Git Repository Initialization:**
-   - Initialized git tracking.
+1. **Repository Layout & Scaffolding:**
+   - Modular structure initialized: `/infrastructure`, `/src/analytics_engine`, `/src/jit_proxy`, `/tests/jmeter_plans`.
+   - Comprehensive `.gitignore` configured to exclude Terraform state/locks, Python bytecode, JMeter result files (`*.jtl`, `jmeter.log`), and local networking/Hyper-V/Docker bridge artifacts.
+
+2. **Phase 1: Declarative Infrastructure Refinements:**
+   - **Private VPC Endpoints:**
+     - Provisioned AWS STS (`Interface`), CloudWatch Logs (`Interface`), and CloudTrail (`Interface`) endpoints with private DNS in isolated subnets.
+     - Provisioned Amazon S3 (`Gateway`) and Amazon DynamoDB (`Gateway`) endpoints mapped to isolated route tables for zero-internet private AWS API connectivity.
+     - Dedicated `aws_security_group.vpc_endpoints_sg` and `aws_security_group.microservice_sg` to enforce TLS 443 internal communication.
+   - **Telemetry Aggregation Pipeline:**
+     - Created `aws_s3_bucket.cloudtrail_bucket` with S3 versioning, AES256 server-side encryption, public access blocks, and CloudTrail principal access policy.
+     - Configured `aws_cloudwatch_log_group.telemetry_log_group` (`/aws/aela/${var.environment}/telemetry`) with configurable retention.
+     - Created `aws_cloudtrail.aela_telemetry_trail` and dedicated CloudTrail-to-CloudWatch IAM logging roles to stream management and data events directly into CloudWatch Logs.
+   - **Distributed Remote State Storage & Locking:**
+     - Provisioned `aws_s3_bucket.terraform_state` with encryption and versioning.
+     - Provisioned `aws_dynamodb_table.terraform_locks` with `LockID` hash key for concurrency lock safety.
+     - Created modular [`infrastructure/backend.tf`](file:///d:/Projects/Cloud%20Architecture%20Project/infrastructure/backend.tf) with instructions for switching between remote S3 locking and local state fallback during local development.
+   - **Base Operational vs. Dynamic Isolation Roles:**
+     - Configured `aws_iam_role.base_service_role` and `aws_iam_role.deny_isolation_role` (`ExplicitAbsoluteDenyAll`).
+     - Provisioned test microservice `aws_instance.target_test_node` with IMDSv2 enforced in isolated subnets.
+
+3. **Phase 2 Scaffolding Prepared:**
+   - Lambda telemetry ingestion handler and dateutil/time-decay calculations scaffolded in [`src/analytics_engine/handler.py`](file:///d:/Projects/Cloud%20Architecture%20Project/src/analytics_engine/handler.py).
+   - JIT API Gateway and AWS STS credential lease handler scaffolded in [`src/jit_proxy/handler.py`](file:///d:/Projects/Cloud%20Architecture%20Project/src/jit_proxy/handler.py).
 
 ## Files Created or Modified
-- [`.gitignore`](file:///d:/Projects/Cloud%20Architecture%20Project/.gitignore)
-- [`PROGRESS.md`](file:///d:/Projects/Cloud%20Architecture%20Project/PROGRESS.md)
-- [`infrastructure/providers.tf`](file:///d:/Projects/Cloud%20Architecture%20Project/infrastructure/providers.tf)
 - [`infrastructure/variables.tf`](file:///d:/Projects/Cloud%20Architecture%20Project/infrastructure/variables.tf)
 - [`infrastructure/main.tf`](file:///d:/Projects/Cloud%20Architecture%20Project/infrastructure/main.tf)
 - [`infrastructure/outputs.tf`](file:///d:/Projects/Cloud%20Architecture%20Project/infrastructure/outputs.tf)
-- [`src/analytics_engine/__init__.py`](file:///d:/Projects/Cloud%20Architecture%20Project/src/analytics_engine/__init__.py)
-- [`src/analytics_engine/requirements.txt`](file:///d:/Projects/Cloud%20Architecture%20Project/src/analytics_engine/requirements.txt)
-- [`src/analytics_engine/handler.py`](file:///d:/Projects/Cloud%20Architecture%20Project/src/analytics_engine/handler.py)
-- [`src/jit_proxy/__init__.py`](file:///d:/Projects/Cloud%20Architecture%20Project/src/jit_proxy/__init__.py)
-- [`src/jit_proxy/requirements.txt`](file:///d:/Projects/Cloud%20Architecture%20Project/src/jit_proxy/requirements.txt)
-- [`src/jit_proxy/handler.py`](file:///d:/Projects/Cloud%20Architecture%20Project/src/jit_proxy/handler.py)
-- [`tests/jmeter_plans/.gitkeep`](file:///d:/Projects/Cloud%20Architecture%20Project/tests/jmeter_plans/.gitkeep)
-- [`tests/jmeter_plans/README.md`](file:///d:/Projects/Cloud%20Architecture%20Project/tests/jmeter_plans/README.md)
+- [`infrastructure/backend.tf`](file:///d:/Projects/Cloud%20Architecture%20Project/infrastructure/backend.tf)
+- [`PROGRESS.md`](file:///d:/Projects/Cloud%20Architecture%20Project/PROGRESS.md)
 
 ## Next Immediate Action
-- Complete Phase 1 tasks: Refine Terraform resources for VPC endpoints, CloudTrail/CloudWatch stream configurations, and state storage.
-- Proceed to Phase 2: Implement unit tests and end-to-end event stream parsing for the Python 3.11 Lambda Analytics Engine.
+- **Begin Phase 2: Event Stream Integration**:
+  - Implement detailed CloudTrail event filtering and anomaly/idle signature identification in `analytics_engine`.
+  - Write unit tests using `pytest` for CloudTrail signature parsing and time-decay gap calculations.
+  - Implement DynamoDB / state tracking for last active API invocation timestamps.

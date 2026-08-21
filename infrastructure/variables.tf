@@ -1,3 +1,7 @@
+# ==============================================================================
+# AELA - Terraform Input Variables
+# ==============================================================================
+
 variable "aws_region" {
   description = "AWS deployment region"
   type        = string
@@ -10,6 +14,7 @@ variable "environment" {
   default     = "dev"
 }
 
+# --- Network Architecture Variables ---
 variable "vpc_cidr" {
   description = "CIDR block for the isolated Amazon VPC"
   type        = string
@@ -32,4 +37,37 @@ variable "instance_type" {
   description = "EC2 micro instance type for target test nodes"
   type        = string
   default     = "t2.micro"
+}
+
+# --- VPC Endpoints & Connectivity Variables ---
+variable "enable_vpc_endpoints" {
+  description = "Flag to enable private Interface & Gateway VPC Endpoints for isolated subnets"
+  type        = bool
+  default     = true
+}
+
+# --- Telemetry & Observability Variables ---
+variable "cloudwatch_log_retention_days" {
+  description = "Retention period (in days) for CloudWatch telemetry log groups"
+  type        = number
+  default     = 14
+}
+
+variable "enable_cloudtrail_logging" {
+  description = "Enable CloudTrail telemetry streaming to CloudWatch Logs"
+  type        = bool
+  default     = true
+}
+
+# --- State Management Variables ---
+variable "state_bucket_prefix" {
+  description = "Prefix for the remote S3 state storage bucket"
+  type        = string
+  default     = "aela-tf-state"
+}
+
+variable "state_lock_table_name" {
+  description = "DynamoDB table name for Terraform state locking"
+  type        = string
+  default     = "aela-tf-locks"
 }
