@@ -1,0 +1,104 @@
+# ==============================================================================
+# AELA (.gitignore) - Environment, Infrastructure, Runtime & Network Configurations
+# ==============================================================================
+
+# --- Terraform & IaC ---
+.terraform/
+.terraform.lock.hcl
+*.tfstate
+*.tfstate.*
+crash.log
+crash.*.log
+*.tfvars
+*.tfvars.json
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+.terraformrc
+terraform.rc
+
+# --- Python Environment & Bytecode ---
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# Virtual Environments
+.env
+.venv
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+
+# Testing & Coverage
+.pytest_cache/
+.coverage
+.coverage.*
+htmlcov/
+.tox/
+.nox/
+
+# --- Local Network Configurations, Mock Routing, Hyper-V & Docker Adapters ---
+# Strictly exclude local network bridge, Hyper-V, and mock traffic routing files
+.env.*
+!.env.example
+network_config.json
+local_network.json
+hosts.local
+hyperv_network.*
+docker_bridge.*
+mock_traffic_config.*
+local_routing.conf
+*.local.json
+local_overrides/
+
+# --- JMeter Testing Outputs ---
+*.jtl
+jmeter.log
+tests/jmeter_plans/results/
+tests/jmeter_plans/*.jtl
+
+# --- Operating System & IDE Specifics ---
+# Windows
+Thumbs.db
+Thumbs.db:encryptable
+ehthumbs.db
+ehthumbs_vista.db
+[Dd]esktop.ini
+$RECYCLE.BIN/
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Editors & IDEs
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
