@@ -1,7 +1,7 @@
 # AELA - Project Progress & Execution State
 
 ## Current Active Phase
-- **Phase 4: Empirical Load Testing & Validation (Completed - Ready for Execution & Presentation)**
+- **Academic Presentation & Demonstration Delivery (Completed - Unified Master Runner Ready)**
 
 ## Completed Steps & Exact Techniques/Libraries Used
 1. **Phase 1: Declarative Infrastructure Coding (Completed):**
@@ -28,27 +28,23 @@
    - 10 unit tests with `moto.mock_aws` in `tests/test_jit_proxy.py`.
 
 4. **Phase 4: Empirical Load Testing & Validation (Completed):**
-   - **Apache JMeter Test Plan ([`tests/jmeter_plans/burst_traffic_plan.jmx`](file:///d:/Projects/Cloud%20Architecture%20Project/tests/jmeter_plans/burst_traffic_plan.jmx)):**
-     - Parameterized for seamless toggling between local mock endpoints (`http://127.0.0.1:8000`) and live AWS API Gateway (`https://.../jit/lease`).
-     - Thread Group 1: JIT Credential Leasing burst load testing API Gateway throughput and STS transient token minting latency.
-     - Thread Group 2: Step Functions Revocation loop triggers and scale-to-zero validation under synthetic traffic spikes.
-     - Thread Group 3: Quarantined node rejection verification asserting HTTP 403 Forbidden.
-     - Configured with `SummaryReport` and `.jtl` metrics collector.
-   - **Local Mock HTTP Server ([`tests/jmeter_plans/mock_server.py`](file:///d:/Projects/Cloud%20Architecture%20Project/tests/jmeter_plans/mock_server.py)):**
-     - Lightweight local server providing `POST /jit/lease`, `POST /quarantine/trigger`, and `GET /health` with Hyper-V & Docker bridge isolation protection.
-   - **High-Concurrency Benchmark Runner ([`tests/jmeter_plans/load_test_runner.py`](file:///d:/Projects/Cloud%20Architecture%20Project/tests/jmeter_plans/load_test_runner.py)):**
-     - Multi-threaded performance test runner reporting throughput (RPS), success rate (100%), and latency percentiles (p50, p90, p95, p99).
-   - **Documentation & Execution Guide ([`tests/jmeter_plans/README.md`](file:///d:/Projects/Cloud%20Architecture%20Project/tests/jmeter_plans/README.md)).**
+   - Apache JMeter Test Plan ([`tests/jmeter_plans/burst_traffic_plan.jmx`](file:///d:/Projects/Cloud%20Architecture%20Project/tests/jmeter_plans/burst_traffic_plan.jmx)).
+   - Local Mock HTTP Server ([`tests/jmeter_plans/mock_server.py`](file:///d:/Projects/Cloud%20Architecture%20Project/tests/jmeter_plans/mock_server.py)).
+   - High-Concurrency Benchmark Runner ([`tests/jmeter_plans/load_test_runner.py`](file:///d:/Projects/Cloud%20Architecture%20Project/tests/jmeter_plans/load_test_runner.py)).
+
+5. **Unified Academic Demonstration Orchestration (Completed):**
+   - Created [`run_academic_demo.py`](file:///d:/Projects/Cloud%20Architecture%20Project/run_academic_demo.py) in root directory.
+   - Automatically clears terminal and displays required formal academic header:
+     `Automated Ephemeral Least-Privilege Architecture (AELA) | Vellore Institute of Technology | Presented by: Taanush Emmanuel Abraham (Reg: 24BCE0708)`
+   - Sequentially executes all three demonstration phases via `subprocess` with 5-second countdown intermissions and visual ASCII delimiters:
+     1. Analytics Engine Demo (`python src/analytics_engine/demo_runner.py`)
+     2. JIT Proxy Demo (`python src/jit_proxy/demo_runner.py`)
+     3. Load Benchmark Runner (`python tests/jmeter_plans/load_test_runner.py`)
+   - Handles `KeyboardInterrupt` cleanly without throwing unhandled stack traces.
 
 ## Files Created or Modified
-- [`tests/jmeter_plans/burst_traffic_plan.jmx`](file:///d:/Projects/Cloud%20Architecture%20Project/tests/jmeter_plans/burst_traffic_plan.jmx)
-- [`tests/jmeter_plans/mock_server.py`](file:///d:/Projects/Cloud%20Architecture%20Project/tests/jmeter_plans/mock_server.py)
-- [`tests/jmeter_plans/load_test_runner.py`](file:///d:/Projects/Cloud%20Architecture%20Project/tests/jmeter_plans/load_test_runner.py)
-- [`tests/jmeter_plans/README.md`](file:///d:/Projects/Cloud%20Architecture%20Project/tests/jmeter_plans/README.md)
+- [`run_academic_demo.py`](file:///d:/Projects/Cloud%20Architecture%20Project/run_academic_demo.py)
 - [`PROGRESS.md`](file:///d:/Projects/Cloud%20Architecture%20Project/PROGRESS.md)
 
 ## Next Immediate Action
-- Execute full Apache JMeter load tests against live staging endpoints or demonstrate the complete AELA pipeline using the interactive presentation runners:
-  - Analytics Engine Demo: `python src/analytics_engine/demo_runner.py`
-  - JIT Proxy Demo: `python src/jit_proxy/demo_runner.py`
-  - Load Benchmark Runner: `python tests/jmeter_plans/load_test_runner.py`
+- Execute `python run_academic_demo.py` to present the end-to-end AELA architecture demonstration to academic evaluators.
