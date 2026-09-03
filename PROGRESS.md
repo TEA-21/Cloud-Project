@@ -1,7 +1,7 @@
 # AELA - Project Progress & Execution State
 
 ## Current Active Phase
-- **Academic Presentation & Demonstration Delivery (Completed - Unified Master Runner Ready)**
+- **Interactive Visual Web Dashboard & Academic UI Delivery (Completed)**
 
 ## Completed Steps & Exact Techniques/Libraries Used
 1. **Phase 1: Declarative Infrastructure Coding (Completed):**
@@ -32,19 +32,22 @@
    - Local Mock HTTP Server ([`tests/jmeter_plans/mock_server.py`](file:///d:/Projects/Cloud%20Architecture%20Project/tests/jmeter_plans/mock_server.py)).
    - High-Concurrency Benchmark Runner ([`tests/jmeter_plans/load_test_runner.py`](file:///d:/Projects/Cloud%20Architecture%20Project/tests/jmeter_plans/load_test_runner.py)).
 
-5. **Unified Academic Demonstration Orchestration (Completed):**
-   - Created [`run_academic_demo.py`](file:///d:/Projects/Cloud%20Architecture%20Project/run_academic_demo.py) in root directory.
-   - Automatically clears terminal and displays required formal academic header:
-     `Automated Ephemeral Least-Privilege Architecture (AELA) | Vellore Institute of Technology | Presented by: Taanush Emmanuel Abraham (Reg: 24BCE0708)`
-   - Sequentially executes all three demonstration phases via `subprocess` with 5-second countdown intermissions and visual ASCII delimiters:
-     1. Analytics Engine Demo (`python src/analytics_engine/demo_runner.py`)
-     2. JIT Proxy Demo (`python src/jit_proxy/demo_runner.py`)
-     3. Load Benchmark Runner (`python tests/jmeter_plans/load_test_runner.py`)
-   - Handles `KeyboardInterrupt` cleanly without throwing unhandled stack traces.
+5. **Presentation Systems & Interactive UI (Completed):**
+   - **Terminal Academic Runner ([`run_academic_demo.py`](file:///d:/Projects/Cloud%20Architecture%20Project/run_academic_demo.py)):**
+     - Clears screen, prints formal academic header, and sequentially executes the 3 runners with 5s pauses and signal interruption handling.
+   - **Interactive Streamlit Web Dashboard ([`visual_demo.py`](file:///d:/Projects/Cloud%20Architecture%20Project/visual_demo.py)):**
+     - Academic header: `Automated Ephemeral Least-Privilege Architecture` with subheader: `Presented by: Taanush Emmanuel Abraham (24BCE0708) & Tanishka Kundu (24BCE0730) | Vellore Institute of Technology`.
+     - **Tab 1 ("Telemetry & Isolation")**: Injects synthetic CloudTrail signatures, evaluates time-decay idle gaps, updates DynamoDB state in real time, and visually alerts/flashes red on `IDLE_EXPIRED` and `ANOMALY_QUARANTINED` triggers with simulated SNS alert dispatches.
+     - **Tab 2 ("JIT Access Proxy")**: Simulates microservice API Gateway authorization requests, displays dynamically scoped IAM session policy generation, and mints 5-minute transient STS tokens with `st.success()`, while blocking quarantined nodes with `st.error()`.
+     - **Tab 3 ("Load Metrics")**: Runs multi-threaded burst benchmarks, displays throughput (RPS) and latency percentiles (p50, p90, p99) via `st.metric()`, and plots synthetic burst traffic curves vs isolation thresholds via `st.line_chart()`.
+     - Pinned core dependencies in root [`requirements.txt`](file:///d:/Projects/Cloud%20Architecture%20Project/requirements.txt).
+     - Full offline parity with `AELA_OFFLINE_MODE=1`.
 
 ## Files Created or Modified
-- [`run_academic_demo.py`](file:///d:/Projects/Cloud%20Architecture%20Project/run_academic_demo.py)
+- [`visual_demo.py`](file:///d:/Projects/Cloud%20Architecture%20Project/visual_demo.py)
+- [`requirements.txt`](file:///d:/Projects/Cloud%20Architecture%20Project/requirements.txt)
 - [`PROGRESS.md`](file:///d:/Projects/Cloud%20Architecture%20Project/PROGRESS.md)
 
 ## Next Immediate Action
-- Execute `python run_academic_demo.py` to present the end-to-end AELA architecture demonstration to academic evaluators.
+- Launch the interactive web presentation dashboard locally by running:
+  `streamlit run visual_demo.py`
