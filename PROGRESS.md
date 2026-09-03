@@ -1,8 +1,7 @@
 # AELA - Project Progress & Execution State
 
 ## Current Active Phase
-- **Phase 3: State-Machine Loop Engineering & JIT Proxy Integration (Completed)**
-- **Transitioning to Phase 4: Empirical Load Testing & Validation (Weeks 7-8)**
+- **Phase 4: Empirical Load Testing & Validation (Completed - Ready for Execution & Presentation)**
 
 ## Completed Steps & Exact Techniques/Libraries Used
 1. **Phase 1: Declarative Infrastructure Coding (Completed):**
@@ -22,36 +21,34 @@
    - Interactive demo runner in `src/analytics_engine/demo_runner.py`.
 
 3. **Phase 3: State-Machine Loop Engineering & JIT Leasing (Completed):**
-   - **AWS Step Functions Active Revocation Loop ([`infrastructure/asl/revocation_workflow.asl.json`](file:///d:/Projects/Cloud%20Architecture%20Project/infrastructure/asl/revocation_workflow.asl.json)):**
-     - Designed Amazon States Language (ASL) JSON workflow.
-     - Sequentially executes dynamic IAM operational policy detachment (`iam:detachRolePolicy`), immediate Deny isolation policy attachment (`iam:attachRolePolicy`), and SNS alert publishing (`sns:publish`).
-     - Includes robust error handling (`Catch` on `States.ALL` and `NoSuchEntityException`) routing to failure alerting.
-   - **Amazon SNS Quarantine Alert Integration ([`infrastructure/main.tf`](file:///d:/Projects/Cloud%20Architecture%20Project/infrastructure/main.tf)):**
-     - Provisioned `aws_sns_topic.quarantine_alerts` (`aela-${var.environment}-quarantine-alerts`) and optional email subscription endpoint.
-     - Configured Step Functions IAM role with least-privilege policy for role swapping and SNS publishing.
-     - Configured CloudWatch Log Group for execution logging (`aws_cloudwatch_log_group.sfn_log_group`).
-   - **Just-In-Time (JIT) Authorization Proxy ([`src/jit_proxy/handler.py`](file:///d:/Projects/Cloud%20Architecture%20Project/src/jit_proxy/handler.py)):**
-     - Amazon API Gateway backend handler validating microservice identity, requested action, and quarantine status.
-     - Dynamically constructs minimal, scoped-down session policies (e.g. restricting strictly to `dynamodb:GetItem` or `s3:GetObject`).
-     - Integrates AWS STS `AssumeRole` to issue localized, 5-minute transient access tokens.
-     - Integrated offline presentation fallback mode when credentials are not present.
-   - **Presentation Demo Runner ([`src/jit_proxy/demo_runner.py`](file:///d:/Projects/Cloud%20Architecture%20Project/src/jit_proxy/demo_runner.py)):**
-     - Interactive script showcasing valid lease granting, quarantined node rejections, and unauthorized action blockings.
-   - **Unit Testing Suite with Moto Parity ([`tests/test_jit_proxy.py`](file:///d:/Projects/Cloud%20Architecture%20Project/tests/test_jit_proxy.py)):**
-     - 10 unit tests using `moto.mock_aws` and offline mock fixtures.
-     - Combined total of **23 unit tests** passing with 100% offline reliability.
+   - AWS Step Functions active revocation loop ASL JSON workflow ([`infrastructure/asl/revocation_workflow.asl.json`](file:///d:/Projects/Cloud%20Architecture%20Project/infrastructure/asl/revocation_workflow.asl.json)).
+   - Amazon SNS topic (`aela-${var.environment}-quarantine-alerts`) and email alert subscription integration.
+   - Just-In-Time (JIT) Authorization Proxy ([`src/jit_proxy/handler.py`](file:///d:/Projects/Cloud%20Architecture%20Project/src/jit_proxy/handler.py)) issuing 5-minute ephemeral AWS STS credentials with dynamic scoped session policies.
+   - Interactive demo runner in `src/jit_proxy/demo_runner.py`.
+   - 10 unit tests with `moto.mock_aws` in `tests/test_jit_proxy.py`.
+
+4. **Phase 4: Empirical Load Testing & Validation (Completed):**
+   - **Apache JMeter Test Plan ([`tests/jmeter_plans/burst_traffic_plan.jmx`](file:///d:/Projects/Cloud%20Architecture%20Project/tests/jmeter_plans/burst_traffic_plan.jmx)):**
+     - Parameterized for seamless toggling between local mock endpoints (`http://127.0.0.1:8000`) and live AWS API Gateway (`https://.../jit/lease`).
+     - Thread Group 1: JIT Credential Leasing burst load testing API Gateway throughput and STS transient token minting latency.
+     - Thread Group 2: Step Functions Revocation loop triggers and scale-to-zero validation under synthetic traffic spikes.
+     - Thread Group 3: Quarantined node rejection verification asserting HTTP 403 Forbidden.
+     - Configured with `SummaryReport` and `.jtl` metrics collector.
+   - **Local Mock HTTP Server ([`tests/jmeter_plans/mock_server.py`](file:///d:/Projects/Cloud%20Architecture%20Project/tests/jmeter_plans/mock_server.py)):**
+     - Lightweight local server providing `POST /jit/lease`, `POST /quarantine/trigger`, and `GET /health` with Hyper-V & Docker bridge isolation protection.
+   - **High-Concurrency Benchmark Runner ([`tests/jmeter_plans/load_test_runner.py`](file:///d:/Projects/Cloud%20Architecture%20Project/tests/jmeter_plans/load_test_runner.py)):**
+     - Multi-threaded performance test runner reporting throughput (RPS), success rate (100%), and latency percentiles (p50, p90, p95, p99).
+   - **Documentation & Execution Guide ([`tests/jmeter_plans/README.md`](file:///d:/Projects/Cloud%20Architecture%20Project/tests/jmeter_plans/README.md)).**
 
 ## Files Created or Modified
-- [`infrastructure/asl/revocation_workflow.asl.json`](file:///d:/Projects/Cloud%20Architecture%20Project/infrastructure/asl/revocation_workflow.asl.json)
-- [`infrastructure/variables.tf`](file:///d:/Projects/Cloud%20Architecture%20Project/infrastructure/variables.tf)
-- [`infrastructure/main.tf`](file:///d:/Projects/Cloud%20Architecture%20Project/infrastructure/main.tf)
-- [`infrastructure/outputs.tf`](file:///d:/Projects/Cloud%20Architecture%20Project/infrastructure/outputs.tf)
-- [`src/jit_proxy/handler.py`](file:///d:/Projects/Cloud%20Architecture%20Project/src/jit_proxy/handler.py)
-- [`src/jit_proxy/demo_runner.py`](file:///d:/Projects/Cloud%20Architecture%20Project/src/jit_proxy/demo_runner.py)
-- [`tests/test_jit_proxy.py`](file:///d:/Projects/Cloud%20Architecture%20Project/tests/test_jit_proxy.py)
+- [`tests/jmeter_plans/burst_traffic_plan.jmx`](file:///d:/Projects/Cloud%20Architecture%20Project/tests/jmeter_plans/burst_traffic_plan.jmx)
+- [`tests/jmeter_plans/mock_server.py`](file:///d:/Projects/Cloud%20Architecture%20Project/tests/jmeter_plans/mock_server.py)
+- [`tests/jmeter_plans/load_test_runner.py`](file:///d:/Projects/Cloud%20Architecture%20Project/tests/jmeter_plans/load_test_runner.py)
+- [`tests/jmeter_plans/README.md`](file:///d:/Projects/Cloud%20Architecture%20Project/tests/jmeter_plans/README.md)
 - [`PROGRESS.md`](file:///d:/Projects/Cloud%20Architecture%20Project/PROGRESS.md)
 
 ## Next Immediate Action
-- **Begin Phase 4: Empirical Load Testing & Validation**:
-  - Author Apache JMeter test plan (`tests/jmeter_plans/burst_traffic_plan.jmx`) to benchmark API Gateway JIT authorization endpoint throughput, STS transient credential minting latency, and Step Functions revocation triggers under burst load.
-  - Test synthetic traffic spikes and verify isolation metrics.
+- Execute full Apache JMeter load tests against live staging endpoints or demonstrate the complete AELA pipeline using the interactive presentation runners:
+  - Analytics Engine Demo: `python src/analytics_engine/demo_runner.py`
+  - JIT Proxy Demo: `python src/jit_proxy/demo_runner.py`
+  - Load Benchmark Runner: `python tests/jmeter_plans/load_test_runner.py`
