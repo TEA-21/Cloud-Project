@@ -14,14 +14,12 @@ import sys
 import time
 from datetime import datetime, timedelta, timezone
 
+# Ensure the project root is in the Python path
+sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+
 # Enforce offline mode for complete offline demonstration parity
 os.environ["AELA_OFFLINE_MODE"] = "1"
 os.environ["AWS_REGION"] = "us-east-1"
-
-# Ensure project root is in sys.path
-PROJECT_ROOT = os.path.abspath(os.path.dirname(__file__))
-if PROJECT_ROOT not in sys.path:
-    sys.path.insert(0, PROJECT_ROOT)
 
 import pandas as pd
 import streamlit as st
