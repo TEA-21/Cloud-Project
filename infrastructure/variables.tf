@@ -71,3 +71,16 @@ variable "state_lock_table_name" {
   type        = string
   default     = "aela-tf-locks"
 }
+
+# --- Phase 3: Step Functions & SNS Alerting Variables ---
+variable "alert_email_endpoint" {
+  description = "Optional email address endpoint for receiving immediate quarantine SNS alerts"
+  type        = string
+  default     = ""
+}
+
+variable "enable_sns_alerts" {
+  description = "Controls whether the SNS quarantine alert topic is provisioned"
+  type        = bool
+  default     = true
+}

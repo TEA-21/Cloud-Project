@@ -101,3 +101,19 @@ output "terraform_locks_table_name" {
   description = "Name of the DynamoDB table provisioned for Terraform distributed state locking"
   value       = aws_dynamodb_table.terraform_locks.name
 }
+
+# --- Step Functions & Alerting Outputs ---
+output "sns_quarantine_alerts_topic_arn" {
+  description = "ARN of the Amazon SNS topic dispatching immediate quarantine alerts"
+  value       = try(aws_sns_topic.quarantine_alerts[0].arn, null)
+}
+
+output "sfn_revocation_workflow_arn" {
+  description = "ARN of the Step Functions active revocation loop state machine"
+  value       = aws_sfn_state_machine.revocation_workflow.arn
+}
+
+output "sfn_revocation_workflow_name" {
+  description = "Name of the Step Functions active revocation loop state machine"
+  value       = aws_sfn_state_machine.revocation_workflow.name
+}

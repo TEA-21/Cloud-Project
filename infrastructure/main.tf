@@ -8,6 +8,7 @@
 # 5. Private VPC Endpoints (STS, Logs, CloudTrail, S3, DynamoDB)
 # 6. Telemetry Pipeline (CloudTrail + CloudWatch Log Stream)
 # 7. Remote State Storage (S3 + DynamoDB State Lock Table)
+# 8. Step Functions Active Revocation Loop & SNS Alerting
 # ==============================================================================
 
 data "aws_caller_identity" "current" {}
@@ -524,5 +525,138 @@ resource "aws_dynamodb_table" "terraform_locks" {
 
   tags = {
     Name = "aela-${var.environment}-terraform-locks"
+  }
+}
+
+# ------------------------------------------------------------------------------
+# 8. Phase 3: Step Functions Active Revocation Loop & SNS Alert Infrastructure
+# ------------------------------------------------------------------------------
+
+# Amazon SNS Topic for Immediate Quarantine Alerts
+resource "aws_sns_topic" "quarantine_alerts" {
+  count = var.enable_sns_alerts ? 1 : 0
+  name  = "aela-${var.environment}-quarantine-alerts"
+
+  tags = {
+    Name = "aela-${var.environment}-quarantine-alerts"
+    Role = "SecurityAlerting"
+  }
+}
+
+# Optional Email Subscription for Quarantine Notifications
+resource "aws_sns_topic_subscription" "quarantine_email_alert" {
+  count     = (var.enable_sns_alerts && var.alert_email_endpoint != "") ? 1 : 0
+  topic_arn = aws_sns_topic.quarantine_alerts[0].arn
+  protocol  = "email"
+  endpoint  = var.alert_email_endpoint
+}
+
+# CloudWatch Log Group for Step Functions Execution Tracing
+resource "aws_cloudwatch_log_group" "sfn_log_group" {
+  name              = "/aws/vendedlogs/states/aela-${var.environment}-revocation-workflow"
+  retention_in_days = var.cloudwatch_log_retention_days
+
+  tags = {
+    Name = "aela-${var.environment}-sfn-logs"
+  }
+}
+
+# IAM Role for Step Functions Execution
+resource "aws_iam_role" "sfn_revocation_role" {
+  name = "aela-${var.environment}-sfn-revocation-role"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Principal = {
+          Service = "states.amazonaws.com"
+        }
+        Action = "sts:AssumeRole"
+      }
+    ]
+  })
+
+  tags = {
+    Name = "aela-${var.environment}-sfn-revocation-role"
+    Role = "Orchestration"
+  }
+}
+
+# IAM Policy for Step Functions (IAM Policy swapping + SNS Alerting)
+resource "aws_iam_policy" "sfn_revocation_policy" {
+  name        = "aela-${var.environment}-sfn-revocation-policy"
+  description = "Allows Step Functions to detach operational policies, attach Deny role, and publish SNS alerts"
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Sid      = "IAMRolePolicySwap"
+        Effect   = "Allow"
+        Action   = [
+          "iam:DetachRolePolicy",
+          "iam:AttachRolePolicy",
+          "iam:ListAttachedRolePolicies"
+        ]
+        Resource = [
+          aws_iam_role.base_service_role.arn,
+          aws_iam_role.deny_isolation_role.arn,
+          "arn:aws:iam::${data.aws_caller_identity.current.account_id}:role/aela-*"
+        ]
+      },
+      {
+        Sid      = "SNSPublishAlert"
+        Effect   = "Allow"
+        Action   = [
+          "sns:Publish"
+        ]
+        Resource = var.enable_sns_alerts ? [aws_sns_topic.quarantine_alerts[0].arn] : ["*"]
+      },
+      {
+        Sid      = "CloudWatchLogsDelivery"
+        Effect   = "Allow"
+        Action   = [
+          "logs:CreateLogDelivery",
+          "logs:GetLogDelivery",
+          "logs:UpdateLogDelivery",
+          "logs:DeleteLogDelivery",
+          "logs:ListLogDeliveries",
+          "logs:PutResourcePolicy",
+          "logs:DescribeResourcePolicies",
+          "logs:DescribeLogGroups"
+        ]
+        Resource = "*"
+      }
+    ]
+  })
+}
+
+resource "aws_iam_role_policy_attachment" "sfn_revocation_attach" {
+  role       = aws_iam_role.sfn_revocation_role.name
+  policy_arn = aws_iam_policy.sfn_revocation_policy.arn
+}
+
+# AWS Step Functions State Machine (Active Revocation Loop)
+resource "aws_sfn_state_machine" "revocation_workflow" {
+  name     = "aela-${var.environment}-revocation-workflow"
+  role_arn = aws_iam_role.sfn_revocation_role.arn
+
+  definition = templatefile("${path.module}/asl/revocation_workflow.asl.json", {
+    SNSTopicArn          = var.enable_sns_alerts ? aws_sns_topic.quarantine_alerts[0].arn : "arn:aws:sns:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:aela-${var.environment}-quarantine-alerts"
+    DenyPolicyArn        = aws_iam_policy.quarantine_deny_all_policy.arn
+    OperationalPolicyArn = aws_iam_policy.base_functional_policy.arn
+  })
+
+  logging_configuration {
+    log_destination        = "${aws_cloudwatch_log_group.sfn_log_group.arn}:*"
+    include_execution_data = true
+    level                  = "ALL"
+  }
+
+  tags = {
+    Name = "aela-${var.environment}-revocation-workflow"
+    Role = "StateRevocationLoop"
   }
 }

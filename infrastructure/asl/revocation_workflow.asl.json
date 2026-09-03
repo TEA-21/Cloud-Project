@@ -1,0 +1,119 @@
+{
+  "Comment": "AELA Active Revocation & Quarantine Workflow - Scales IAM permissions down to zero and issues SNS security alert",
+  "StartAt": "ValidateRevocationInput",
+  "States": {
+    "ValidateRevocationInput": {
+      "Type": "Choice",
+      "Choices": [
+        {
+          "Variable": "$.role_name",
+          "IsPresent": true,
+          "Next": "DetachOperationalPolicy"
+        }
+      ],
+      "Default": "RevocationFailedMissingParameters"
+    },
+    "DetachOperationalPolicy": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::aws-sdk:iam:detachRolePolicy",
+      "Parameters": {
+        "RoleName.$": "$.role_name",
+        "PolicyArn.$": "$.target_policy_arn"
+      },
+      "ResultPath": "$.detach_result",
+      "Next": "AttachDenyIsolationPolicy",
+      "Catch": [
+        {
+          "ErrorEquals": [
+            "NoSuchEntityException",
+            "NoSuchEntity"
+          ],
+          "Comment": "If policy already detached, proceed to attach Deny role",
+          "Next": "AttachDenyIsolationPolicy"
+        },
+        {
+          "ErrorEquals": [
+            "States.ALL"
+          ],
+          "ResultPath": "$.error",
+          "Next": "PublishRevocationFailureAlert"
+        }
+      ]
+    },
+    "AttachDenyIsolationPolicy": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::aws-sdk:iam:attachRolePolicy",
+      "Parameters": {
+        "RoleName.$": "$.role_name",
+        "PolicyArn.$": "$.deny_policy_arn"
+      },
+      "ResultPath": "$.attach_result",
+      "Next": "PublishQuarantineAlert",
+      "Catch": [
+        {
+          "ErrorEquals": [
+            "States.ALL"
+          ],
+          "ResultPath": "$.error",
+          "Next": "PublishRevocationFailureAlert"
+        }
+      ]
+    },
+    "PublishQuarantineAlert": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::sns:publish",
+      "Parameters": {
+        "TopicArn": "${SNSTopicArn}",
+        "Subject": "[AELA ALERT] Microservice Quarantine Activated - Permissions Scaled to Zero",
+        "Message": {
+          "event": "AELA_QUARANTINE_ACTIVATED",
+          "service_id.$": "$.service_id",
+          "role_name.$": "$.role_name",
+          "detached_policy.$": "$.target_policy_arn",
+          "attached_deny_policy.$": "$.deny_policy_arn",
+          "quarantine_reason.$": "$.reason",
+          "timestamp.$": "$.timestamp",
+          "status": "QUARANTINED"
+        }
+      },
+      "ResultPath": "$.sns_result",
+      "Next": "RevocationSuccess"
+    },
+    "RevocationSuccess": {
+      "Type": "Pass",
+      "Parameters": {
+        "status": "SUCCESS",
+        "service_id.$": "$.service_id",
+        "role_name.$": "$.role_name",
+        "action": "QUARANTINE_ATTACHED",
+        "message": "Standing permissions successfully stripped and explicit Deny isolation policy attached."
+      },
+      "End": true
+    },
+    "PublishRevocationFailureAlert": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::sns:publish",
+      "Parameters": {
+        "TopicArn": "${SNSTopicArn}",
+        "Subject": "[AELA ERROR] Microservice Quarantine Workflow Failed",
+        "Message": {
+          "event": "AELA_QUARANTINE_FAILED",
+          "service_id.$": "$.service_id",
+          "role_name.$": "$.role_name",
+          "error.$": "$.error"
+        }
+      },
+      "Next": "RevocationFailedExecution"
+    },
+    "RevocationFailedMissingParameters": {
+      "Type": "Fail",
+      "Error": "MissingRequiredParameters",
+      "Cause": "The execution input is missing required field 'role_name' or 'service_id'."
+    },
+    "RevocationFailedExecution": {
+      "Type": "Fail",
+      "Error": "RevocationExecutionError",
+      "Cause": "Encountered an unexpected error while executing IAM policy role swap."
+    }
+  }
+}
