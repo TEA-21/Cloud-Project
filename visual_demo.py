@@ -2,7 +2,6 @@
 ====================================================================================================
 Automated Ephemeral Least-Privilege Architecture (AELA)
 Interactive Web Dashboard & System Monitor
-Author: Taanush Emmanuel Abraham (24BCE0708)
 ====================================================================================================
 """
 
@@ -83,7 +82,6 @@ st.markdown(
 
 # Title & Subheader
 st.markdown('<div class="main-title">Automated Ephemeral Least-Privilege Architecture</div>', unsafe_allow_html=True)
-st.subheader("Author: Taanush Emmanuel Abraham (24BCE0708)")
 st.markdown(
     "🛡️ **Zero-Standing Privilege Pipeline** • **Dynamic Step Functions Revocation** • "
     "**5-Minute Transient STS Leases** • **Offline-Resilient Evaluation Engine**"
@@ -472,7 +470,7 @@ with tab3:
 st.divider()
 st.markdown(
     "<div style='text-align: center; color: #6B7280; font-size: 0.9rem;'>"
-    "AELA Architecture • Author: Taanush Emmanuel Abraham (24BCE0708)"
+    "AELA Architecture • Autonomous Zero-Standing Privilege Engine"
     "</div>",
     unsafe_allow_html=True,
 )

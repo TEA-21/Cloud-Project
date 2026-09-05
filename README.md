@@ -1,7 +1,6 @@
 # Automated Ephemeral Least-Privilege Architecture (AELA)
 ### Autonomous Zero-Standing Privilege & Just-In-Time (JIT) IAM Leasing Engine
 
-**Author:** Taanush Emmanuel Abraham (24BCE0708)  
 **License:** MIT  
 
 ---
@@ -286,4 +285,4 @@ tests/test_jit_proxy.py::test_jit_handler_missing_parameter PASSED              
 ---
 
 ## 📜 License
-Authored by **Taanush Emmanuel Abraham (24BCE0708)**. Released under the MIT License.
+Released under the MIT License.

@@ -2,7 +2,6 @@
 ====================================================================================================
 Automated Ephemeral Least-Privilege Architecture (AELA)
 System Demonstration Master Runner
-Author: Taanush Emmanuel Abraham (24BCE0708)
 ====================================================================================================
 Orchestrates an end-to-end, offline-resilient execution demonstrating all four core layers of the
 Automated Ephemeral Least-Privilege Architecture (AELA).
@@ -25,7 +24,7 @@ def print_system_header() -> None:
     """Prints the professional project system header."""
     border = "=" * 120
     print(border)
-    print("Automated Ephemeral Least-Privilege Architecture (AELA) | Author: Taanush Emmanuel Abraham (24BCE0708)")
+    print("Automated Ephemeral Least-Privilege Architecture (AELA) | Autonomous Zero-Trust Control Plane")
     print(border)
     print()
     sys.stdout.flush()
