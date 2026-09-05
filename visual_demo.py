@@ -83,7 +83,7 @@ st.markdown(
 
 # Academic Title & Subheader
 st.markdown('<div class="main-title">Automated Ephemeral Least-Privilege Architecture</div>', unsafe_allow_html=True)
-st.subheader("Presented by: Taanush Emmanuel Abraham (24BCE0708) & Tanishka Kundu (24BCE0730) | Vellore Institute of Technology")
+st.subheader("Presented by: Taanush Emmanuel Abraham (24BCE0708) | Vellore Institute of Technology")
 st.markdown(
     "🛡️ **Zero-Standing Privilege Pipeline** • **Dynamic Step Functions Revocation** • "
     "**5-Minute Transient STS Leases** • **Offline-Resilient Evaluation Engine**"
@@ -473,7 +473,7 @@ st.divider()
 st.markdown(
     "<div style='text-align: center; color: #6B7280; font-size: 0.9rem;'>"
     "AELA Project Architecture • Vellore Institute of Technology • "
-    "Presented by Taanush Emmanuel Abraham (24BCE0708) & Tanishka Kundu (24BCE0730)"
+    "Presented by Taanush Emmanuel Abraham (24BCE0708)"
     "</div>",
     unsafe_allow_html=True,
 )
