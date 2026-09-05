@@ -1,8 +1,8 @@
 """
 ====================================================================================================
 Automated Ephemeral Least-Privilege Architecture (AELA)
-Interactive Web Dashboard & Presentation System
-Presented by: Taanush Emmanuel Abraham (24BCE0708) & Tanishka Kundu (24BCE0730) | Vellore Institute of Technology
+Interactive Web Dashboard & System Monitor
+Author: Taanush Emmanuel Abraham (24BCE0708)
 ====================================================================================================
 """
 
@@ -81,9 +81,9 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
-# Academic Title & Subheader
+# Title & Subheader
 st.markdown('<div class="main-title">Automated Ephemeral Least-Privilege Architecture</div>', unsafe_allow_html=True)
-st.subheader("Presented by: Taanush Emmanuel Abraham (24BCE0708) | Vellore Institute of Technology")
+st.subheader("Author: Taanush Emmanuel Abraham (24BCE0708)")
 st.markdown(
     "🛡️ **Zero-Standing Privilege Pipeline** • **Dynamic Step Functions Revocation** • "
     "**5-Minute Transient STS Leases** • **Offline-Resilient Evaluation Engine**"
@@ -467,13 +467,12 @@ with tab3:
         )
 
 # ------------------------------------------------------------------------------
-# Academic Footer
+# Footer
 # ------------------------------------------------------------------------------
 st.divider()
 st.markdown(
     "<div style='text-align: center; color: #6B7280; font-size: 0.9rem;'>"
-    "AELA Project Architecture • Vellore Institute of Technology • "
-    "Presented by Taanush Emmanuel Abraham (24BCE0708)"
+    "AELA Architecture • Author: Taanush Emmanuel Abraham (24BCE0708)"
     "</div>",
     unsafe_allow_html=True,
 )

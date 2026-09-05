@@ -1,16 +1,16 @@
 # Automated Ephemeral Least-Privilege Architecture (AELA)
-### Advanced Cloud Security & Autonomic Zero-Trust Architecture
-**Institution:** Vellore Institute of Technology (VIT)  
-**Author:** Taanush Emmanuel Abraham (Registration Number: 24BCE0708)  
-**Course:** Cloud Architecture & Security Capstone Evaluation  
+### Autonomous Zero-Standing Privilege & Just-In-Time (JIT) IAM Leasing Engine
+
+**Author:** Taanush Emmanuel Abraham (24BCE0708)  
+**License:** MIT  
 
 ---
 
-## 📌 Executive Summary & Project Overview
+## 📌 Executive Summary & Architecture Overview
 
-Modern cloud environments face a critical security vulnerability: **standing IAM privileges**. Standard cloud deployments frequently attach long-lived, broad operational permissions to compute instances, containers, and serverless functions. If an identity is compromised via Server-Side Request Forgery (SSRF), application-layer vulnerabilities, or credential leaks, attackers gain continuous access to exfiltrate data or traverse cloud resources laterally.
+Modern cloud environments face a critical security challenge: **standing IAM privileges**. Standard deployments frequently attach persistent, broad operational permissions to compute instances, containers, and serverless functions. If an identity is compromised via Server-Side Request Forgery (SSRF), remote code execution, or leaked credentials, attackers gain indefinite access to exfiltrate data and traverse cloud resources laterally.
 
-**AELA (Automated Ephemeral Least-Privilege Architecture)** resolves this challenge by introducing an autonomic, closed-loop cloud security framework that **dynamically scales cloud permissions down to absolute zero** during periods of inactivity and during detected anomalies. When operational workloads require legitimate access, AELA provisions **Just-In-Time (JIT) ephemeral credentials** with strict 5-minute time-to-live (TTL) limits and granular, request-scoped session policies.
+**AELA (Automated Ephemeral Least-Privilege Architecture)** eliminates standing privileges by implementing an autonomous, closed-loop cloud security framework that **dynamically scales permissions down to absolute zero** during periods of inactivity and upon detected anomalies. When operational workloads require legitimate access, AELA provisions **Just-In-Time (JIT) ephemeral credentials** with strict 5-minute time-to-live (TTL) limits and granular, request-scoped session policies.
 
 ```
 +-----------------------------------------------------------------------------------------+
@@ -53,8 +53,8 @@ AELA operates across four decoupled, event-driven architectural tiers:
 - **Stream Ingestion & Decompression:** The ingestion pipeline automatically processes direct CloudTrail JSON payloads, Amazon Kinesis streams, and compressed CloudWatch Log groups (`gzip` + `base64`).
 - **Zero Public Egress:** Provisioned with AWS VPC Interface Endpoints (AWS STS, CloudWatch Logs, CloudTrail) and Gateway Endpoints (Amazon S3, Amazon DynamoDB), ensuring all internal telemetry traverses private AWS backbone routes without internet exposure.
 
-### 2. Autonomic Decision Engine (AWS Lambda & DynamoDB)
-- **Time-Decay Analysis:** Computes dynamic inactivity duration ($\Delta t = t_{\text{current}} - t_{\text{last\_activity}}$). If idle time exceeds the configured threshold (default: 300 seconds), an autonomic revocation trigger is dispatched.
+### 2. Autonomic Decision Engine (AWS Lambda & Amazon DynamoDB)
+- **Time-Decay Analysis:** Computes dynamic inactivity duration (`time_delta = current_time - last_activity_time`). If idle time exceeds the configured threshold (default: 300 seconds), an autonomic revocation trigger is dispatched.
 - **Heuristic Anomaly Detection:** Real-time signature inspector evaluating high-risk events, including unauthorized access attempts (`AccessDenied`), sensitive IAM policy alterations, and security group tampering.
 - **State Ledger:** Maintains node activity timestamps, access counts, and active isolation flags in Amazon DynamoDB (with transparent in-memory local state fallback for offline environments).
 
@@ -74,12 +74,12 @@ AELA operates across four decoupled, event-driven architectural tiers:
 
 | Category | Technology / Service | Role & Specification |
 | :--- | :--- | :--- |
-| **Cloud Provider** | **AWS (Free Tier Compliant)** | Production deployment target across `us-east-1` |
+| **Cloud Provider** | **AWS (Free Tier Compliant)** | Cloud deployment target across `us-east-1` |
 | **Infrastructure as Code** | **Terraform CLI (v1.5.0+)** | Modular IaC (`main.tf`, `variables.tf`, `outputs.tf`, `backend.tf`) |
 | **Runtime & Logic** | **Python 3.11** | Analytics engine, JIT proxy handler, anomaly detector, CLI runners |
-| **Presentation Dashboard** | **Streamlit (v1.50+)** | Interactive graphical web application for academic demonstration |
+| **Dashboard & Monitoring** | **Streamlit (v1.50+)** | Interactive real-time graphical web application |
 | **Performance Testing** | **Apache JMeter (v5.x)** | Parameterized XML test plan (`burst_traffic_plan.jmx`) |
-| **Load Benchmark Runner** | **Python Concurrent Futures** | Multi-threaded local benchmark client (`load_test_runner.py`) |
+| **Load Benchmark Runner** | **Python Concurrent Futures** | Multi-threaded high-concurrency benchmark client (`load_test_runner.py`) |
 | **Cloud Simulation / Mocks**| **Moto (v5.0+) & Boto3** | Offline-resilient AWS service mocking (DynamoDB, STS, IAM) |
 | **Unit Testing** | **Pytest (v8.0+)** | Automated test suite with 100% pass rate |
 
@@ -116,17 +116,16 @@ AELA operates across four decoupled, event-driven architectural tiers:
 │       ├── load_test_runner.py             # High-concurrency benchmark runner (no JMeter GUI needed)
 │       └── README.md                       # Load testing manual & Windows adapter guide
 ├── visual_demo.py                          # Interactive Streamlit Web Presentation Dashboard
-├── run_academic_demo.py                    # Unified Academic Terminal Presentation Runner
+├── run_system_demo.py                      # Unified Terminal System Demonstration Runner
 ├── requirements.txt                        # Pinned project dependencies
-├── PROGRESS.md                             # Architectural milestone & execution tracking ledger
-└── README.md                               # Capstone documentation & evaluation manual
+└── README.md                               # Project documentation & operational manual
 ```
 
 ---
 
 ## 🚀 Local Demonstration Guide
 
-AELA includes a comprehensive presentation suite designed for academic evaluation. **The entire system features offline-resilient mocks (using `moto` and custom in-memory state providers)**, guaranteeing a seamless presentation even in environments with restricted internet access, institutional firewalls, or active VPN network adapters.
+AELA includes a complete demonstration suite with **offline-resilient mocks (using `moto` and custom in-memory state providers)**, guaranteeing flawless local execution regardless of live AWS credentials, institutional firewalls, or active VPN network adapters.
 
 ### 1. Environment Preparation
 Ensure Python 3.11+ is installed. Clone the repository and install dependencies:
@@ -144,7 +143,7 @@ pip install -r requirements.txt
 ```
 
 ### 2. Launch the Interactive Streamlit Web Dashboard
-Launch the graphical presentation dashboard:
+Launch the graphical dashboard:
 
 ```powershell
 streamlit run visual_demo.py
@@ -163,17 +162,17 @@ The web dashboard will automatically open in your default browser at `http://loc
   * Mints authenticated 5-minute AWS STS transient tokens (`ASIA...`) and demonstrates instant rejection when an isolated identity attempts access.
 * **Tab 3: Load Metrics & Concurrency:**
   * Executes live multi-threaded burst load benchmarks directly from the UI.
-  * Visualizes real-time request-per-second (RPS) throughput and latency percentiles ($p50$, $p90$, $p99$).
+  * Visualizes real-time request-per-second (RPS) throughput and latency percentiles (p50, p90, p99).
   * Plots synthetic traffic curves against the isolation enforcement timeline.
 
 ### 3. Alternative: Unified Terminal Demonstration Runner
-For terminal-based evaluation, execute the sequential academic demonstration script:
+For terminal-based execution, run the automated sequential demonstration script:
 
 ```powershell
-python run_academic_demo.py
+python run_system_demo.py
 ```
 
-This runner presents an academic banner, sequentially runs all three subsystem demos with 5-second pauses, and provides clean visual ASCII output.
+This runner sequentially executes all three subsystem demos with 5-second pauses and provides clean visual ASCII output.
 
 ---
 
@@ -277,7 +276,7 @@ tests/test_jit_proxy.py::test_jit_handler_missing_parameter PASSED              
 
 ---
 
-## 🔒 Security Posture & Academic Significance
+## 🔒 Security Architecture & Enterprise Impact
 
 1. **Elimination of Standing Privileges:** Compute identities maintain zero active IAM capabilities when idle, reducing the blast radius of SSRF and lateral movement vectors to zero.
 2. **Deterministic Scale-to-Zero:** Rather than relying on periodic batch audits, AELA continuously evaluates activity decay and anomaly signals in real time.
@@ -286,5 +285,5 @@ tests/test_jit_proxy.py::test_jit_handler_missing_parameter PASSED              
 
 ---
 
-## 📜 License & Academic Integrity
-Developed as an academic capstone evaluation project for the **Vellore Institute of Technology (VIT)** by **Taanush Emmanuel Abraham (24BCE0708)**. Released under the MIT License.
+## 📜 License
+Authored by **Taanush Emmanuel Abraham (24BCE0708)**. Released under the MIT License.

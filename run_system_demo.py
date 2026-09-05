@@ -1,10 +1,10 @@
 """
 ====================================================================================================
-AELA Academic Demonstration Master Runner
-Vellore Institute of Technology
-Presented by: Taanush Emmanuel Abraham (Reg: 24BCE0708)
+Automated Ephemeral Least-Privilege Architecture (AELA)
+System Demonstration Master Runner
+Author: Taanush Emmanuel Abraham (24BCE0708)
 ====================================================================================================
-Orchestrates an end-to-end, offline-resilient presentation demonstrating all four phases of the
+Orchestrates an end-to-end, offline-resilient execution demonstrating all four core layers of the
 Automated Ephemeral Least-Privilege Architecture (AELA).
 """
 
@@ -21,11 +21,11 @@ def clear_screen() -> None:
     os.system("cls" if os.name == "nt" else "clear")
 
 
-def print_academic_header() -> None:
-    """Prints the formal academic project presentation header."""
+def print_system_header() -> None:
+    """Prints the professional project system header."""
     border = "=" * 120
     print(border)
-    print("Automated Ephemeral Least-Privilege Architecture (AELA) | Vellore Institute of Technology | Presented by: Taanush Emmanuel Abraham (Reg: 24BCE0708)")
+    print("Automated Ephemeral Least-Privilege Architecture (AELA) | Author: Taanush Emmanuel Abraham (24BCE0708)")
     print(border)
     print()
     sys.stdout.flush()
@@ -100,9 +100,9 @@ def main() -> None:
     ]
 
     try:
-        # Step 1: Clear screen and display formal academic header
+        # Step 1: Clear screen and display project header
         clear_screen()
-        print_academic_header()
+        print_system_header()
 
         # Step 2: Sequential Execution of all three demonstration runners
         total_stages = len(stages)
@@ -118,10 +118,10 @@ def main() -> None:
             if idx < total_stages:
                 print_pause_intermission(seconds=5, next_phase_name=stage["next_title"])
 
-        # Final Academic Summary Banner
+        # Final Summary Banner
         sys.stdout.flush()
         print("\n" + "=" * 120)
-        print(" [AELA PRESENTATION COMPLETE] All four architectural layers successfully verified.")
+        print(" [AELA SYSTEM DEMONSTRATION COMPLETE] All four architectural layers successfully verified.")
         print(" 1. Declarative Infrastructure (VPC Isolation, IAM Deny Profiles, Telemetry Endpoints)")
         print(" 2. Event Stream Analytics Engine (CloudTrail Parsing, Time-Decay Gaps, Anomaly Quarantine)")
         print(" 3. State-Machine Loops & JIT Leasing (Step Functions Revocation, Dynamic Scoped STS Tokens)")
@@ -131,7 +131,7 @@ def main() -> None:
 
     except KeyboardInterrupt:
         print("\n\n" + "-" * 120)
-        print(" [PRESENTATION PAUSED / TERMINATED] Academic demonstration exited cleanly by presenter.")
+        print(" [EXECUTION PAUSED / TERMINATED] System demonstration exited cleanly.")
         print("-" * 120 + "\n")
         sys.exit(0)
 
