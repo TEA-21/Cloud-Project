@@ -102,3 +102,18 @@ $RECYCLE.BIN/
 *.ntvs*
 *.njsproj
 *.sln
+
+# --- Frontend & Node.js Artifacts ---
+node_modules/
+**/node_modules/
+dist/
+**/dist/
+.vite/
+**/.vite/
+.npm
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+.eslintcache
+

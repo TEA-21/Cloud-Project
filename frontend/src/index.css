@@ -1,0 +1,54 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: light;
+}
+
+body {
+  background-color: #F8F9FA;
+  color: #111827;
+}
+
+/* Dribbble-style subtle dotted graph paper pattern */
+.canvas-dotted-grid {
+  background-color: #FAFAFC;
+  background-image: radial-gradient(#D5DAE2 1.2px, transparent 1.2px);
+  background-size: 24px 24px;
+}
+
+/* Monospace numeric tabular alignment */
+.tabular-nums {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Subtle light scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: #F8F9FA;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #D1D5DB;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #9CA3AF;
+}
+
+/* Animated flow dash for active graph connections */
+@keyframes flowDash {
+  to {
+    stroke-dashoffset: -32;
+  }
+}
+
+.animate-flow-dash {
+  animation: flowDash 1.2s linear infinite;
+}

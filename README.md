@@ -76,7 +76,8 @@ AELA operates across four decoupled, event-driven architectural tiers:
 | **Cloud Provider** | **AWS (Free Tier Compliant)** | Cloud deployment target across `us-east-1` |
 | **Infrastructure as Code** | **Terraform CLI (v1.5.0+)** | Modular IaC (`main.tf`, `variables.tf`, `outputs.tf`, `backend.tf`) |
 | **Runtime & Logic** | **Python 3.11** | Analytics engine, JIT proxy handler, anomaly detector, CLI runners |
-| **Dashboard & Monitoring** | **Streamlit (v1.50+)** | Interactive real-time graphical web application |
+| **Frontend Security Console** | **React 18, Vite & Tailwind CSS** | Dribbble-style workflow graph builder, topology visualizer, real-time JIT lease tracker |
+| **Legacy Monitor** | **Streamlit (v1.50+)** | Secondary graphical presentation monitor (`visual_demo.py`) |
 | **Performance Testing** | **Apache JMeter (v5.x)** | Parameterized XML test plan (`burst_traffic_plan.jmx`) |
 | **Load Benchmark Runner** | **Python Concurrent Futures** | Multi-threaded high-concurrency benchmark client (`load_test_runner.py`) |
 | **Cloud Simulation / Mocks**| **Moto (v5.0+) & Boto3** | Offline-resilient AWS service mocking (DynamoDB, STS, IAM) |
@@ -88,6 +89,15 @@ AELA operates across four decoupled, event-driven architectural tiers:
 
 ```
 .
+├── frontend/                               # Modern Enterprise Security Operations Console
+│   ├── src/
+│   │   ├── components/                     # Header, Sidebar, GraphCanvas, InspectorPanel, MetricCard, etc.
+│   │   ├── pages/                          # Overview, Incidents, Access Leases, Workflows, Identities, etc.
+│   │   ├── context/                        # Real-time SecurityContext & simulated SSE streams
+│   │   └── data/                           # Centralized mockSecurityData.js with AELA cloud schema
+│   ├── package.json                        # Node dependencies & scripts
+│   ├── tailwind.config.js                  # Light-theme Dribbble palette & styling tokens
+│   └── vite.config.js                      # Vite bundler configuration
 ├── infrastructure/                         # Declarative Terraform Infrastructure
 │   ├── main.tf                             # Core VPC, Endpoints, IAM, S3, CloudWatch resources
 │   ├── variables.tf                        # Configurable CIDRs, timeouts, and thresholds
@@ -116,7 +126,7 @@ AELA operates across four decoupled, event-driven architectural tiers:
 │       └── README.md                       # Load testing manual & Windows adapter guide
 ├── visual_demo.py                          # Interactive Streamlit Web Presentation Dashboard
 ├── run_system_demo.py                      # Unified Terminal System Demonstration Runner
-├── requirements.txt                        # Pinned project dependencies
+├── requirements.txt                        # Pinned Python project dependencies
 └── README.md                               # Project documentation & operational manual
 ```
 
@@ -141,30 +151,34 @@ python -m venv venv
 pip install -r requirements.txt
 ```
 
-### 2. Launch the Interactive Streamlit Web Dashboard
-Launch the graphical dashboard:
+### 2. Launch the Enterprise Security Operations Console (React + Vite)
+Launch the modern Dribbble-style workflow graph visualizer and incident-response console:
+
+```powershell
+cd frontend
+npm install
+npm run dev
+```
+
+The console will start at **`http://localhost:3000`**.
+
+#### Interactive Security Console Features:
+* **Central Graph Topology Canvas:** Interactive dotted graph canvas showing active workloads, credentials, and Step Functions relationships with pan/zoom.
+* **Contextual Inspector Drawer:** Dynamic cloud metadata (AWS platform tags, account hashes, and one-click copyable ARNs).
+* **Workflows Page:** Interactive AWS Step Functions builder with simulated state machine execution.
+* **Real-Time JIT Matrix:** 300-second ephemeral session countdowns with one-click quarantine and extension actions.
+* **Synthetic Telemetry Controls:** Top-bar controls to simulate burst load test traffic and inject zero-day SSRF anomalies.
+
+### 3. Launch the Legacy Streamlit Web Dashboard
+Alternatively, launch the Python Streamlit monitor:
 
 ```powershell
 streamlit run visual_demo.py
 ```
 
-The web dashboard will automatically open in your default browser at `http://localhost:8501`.
+The legacy dashboard opens at `http://localhost:8501`.
 
-#### Dashboard Capabilities:
-* **Tab 1: Telemetry & Isolation:**
-  * Injects synthetic CloudTrail events (benign reads vs. malicious IAM/Security Group mutations).
-  * Demonstrates real-time time-decay gap calculations and automatic Step Functions quarantine triggers.
-  * Displays simulated Amazon SNS security broadcast alerts with instantaneous visual alerts.
-* **Tab 2: Just-In-Time Access Proxy:**
-  * Simulates client microservices requesting ephemeral operational permissions.
-  * Visualizes dynamic, least-privilege IAM session policy generation.
-  * Mints authenticated 5-minute AWS STS transient tokens (`ASIA...`) and demonstrates instant rejection when an isolated identity attempts access.
-* **Tab 3: Load Metrics & Concurrency:**
-  * Executes live multi-threaded burst load benchmarks directly from the UI.
-  * Visualizes real-time request-per-second (RPS) throughput and latency percentiles (p50, p90, p99).
-  * Plots synthetic traffic curves against the isolation enforcement timeline.
-
-### 3. Alternative: Unified Terminal Demonstration Runner
+### 4. Alternative: Unified Terminal Demonstration Runner
 For terminal-based execution, run the automated sequential demonstration script:
 
 ```powershell
