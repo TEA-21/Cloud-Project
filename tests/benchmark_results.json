@@ -1,0 +1,58 @@
+{
+  "timestamp": "2026-09-22T19:41:48.306645+00:00",
+  "total_samples": 123,
+  "legacy_rule_based": {
+    "metrics": {
+      "accuracy": 0.7073,
+      "precision": 1.0,
+      "recall": 0.4098,
+      "f1": 0.5814,
+      "fpr": 0.0,
+      "tp": 25,
+      "fp": 0,
+      "fn": 36,
+      "tn": 62
+    },
+    "latency": {
+      "mean_ms": 0.008,
+      "p50_ms": 0.004,
+      "p90_ms": 0.005,
+      "p95_ms": 0.005,
+      "p99_ms": 0.027,
+      "throughput_eps": 116510.37
+    }
+  },
+  "hybrid_lstm": {
+    "metrics": {
+      "accuracy": 0.9187,
+      "precision": 0.8592,
+      "recall": 1.0,
+      "f1": 0.9242,
+      "fpr": 0.1613,
+      "tp": 61,
+      "fp": 10,
+      "fn": 0,
+      "tn": 52
+    },
+    "latency": {
+      "mean_ms": 0.639,
+      "p50_ms": 0.601,
+      "p90_ms": 0.826,
+      "p95_ms": 1.006,
+      "p99_ms": 1.714,
+      "throughput_eps": 1563.88
+    }
+  },
+  "resource_footprint": {
+    "initial_memory_rss_mb": 288.68,
+    "peak_memory_rss_mb": 290.29,
+    "memory_overhead_mb": 1.62,
+    "cpu_utilization_percent": 234.0
+  },
+  "gains": {
+    "recall_gain_percent": 59.02,
+    "f1_gain_percent": 34.28,
+    "p50_latency_delta_ms": 0.597,
+    "p95_latency_delta_ms": 1.001
+  }
+}

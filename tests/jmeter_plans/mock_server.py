@@ -56,8 +56,25 @@ class AELAMockHTTPRequestHandler(BaseHTTPRequestHandler):
             self._handle_jit_lease(body_dict)
         elif self.path == "/quarantine/trigger":
             self._handle_quarantine_trigger(body_dict)
+        elif self.path == "/analytics/evaluate":
+            self._handle_analytics_evaluate(body_dict)
         else:
             self._send_json_response(404, {"error": f"Endpoint '{self.path}' not supported"})
+
+    def _handle_analytics_evaluate(self, body: Dict[str, Any]):
+        """Delegates to the Analytics Engine hybrid anomaly detector."""
+        from src.analytics_engine.anomaly_detector import analyze_event_anomaly
+        result = analyze_event_anomaly(body)
+        self._send_json_response(200, {
+            "is_anomaly": result.is_anomaly,
+            "risk_level": result.risk_level,
+            "anomaly_type": result.anomaly_type,
+            "anomaly_score": result.anomaly_score,
+            "detection_source": result.detection_source,
+            "threshold_applied": result.threshold_applied,
+            "details": result.details,
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+        })
 
     def _handle_jit_lease(self, body: Dict[str, Any]):
         """Delegates to the JIT proxy Lambda handler."""

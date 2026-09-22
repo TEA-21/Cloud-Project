@@ -40,6 +40,9 @@ class AnomalyResult:
     risk_level: str  # NONE, LOW, MEDIUM, HIGH, CRITICAL
     anomaly_type: Optional[str] = None
     details: str = ""
+    anomaly_score: float = 0.0
+    detection_source: str = "RULE_BASED"  # LSTM_INFERENCE, HYBRID_FALLBACK, HYBRID_OVERRIDE, RULE_BASED
+    threshold_applied: float = 0.5
 
 
 @dataclass
@@ -67,6 +70,9 @@ class DecayEvaluation:
             "reason": self.reason,
             "is_anomaly": self.anomaly_details.is_anomaly if self.anomaly_details else False,
             "risk_level": self.anomaly_details.risk_level if self.anomaly_details else "NONE",
+            "anomaly_score": self.anomaly_details.anomaly_score if self.anomaly_details else 0.0,
+            "detection_source": self.anomaly_details.detection_source if self.anomaly_details else "RULE_BASED",
+            "threshold_applied": self.anomaly_details.threshold_applied if self.anomaly_details else 0.5,
         }
 
 

@@ -1,0 +1,24 @@
+{
+  "model_type": "LSTMAnomalyClassifier",
+  "input_dim": 16,
+  "hidden_dim": 64,
+  "num_layers": 2,
+  "sequence_length": 10,
+  "anomaly_threshold": 0.5,
+  "test_metrics": {
+    "accuracy": 0.9412,
+    "precision": 1.0,
+    "recall": 0.6429,
+    "f1": 0.7826,
+    "tp": 18,
+    "fp": 0,
+    "fn": 10,
+    "tn": 142,
+    "test_loss": 0.1887,
+    "total_test_samples": 170
+  },
+  "trained_at": "2026-09-22T10:57:12.219716+00:00",
+  "final_train_loss": 0.11092559494083666,
+  "final_val_loss": 0.1282219872672177,
+  "epochs_trained": 15
+}

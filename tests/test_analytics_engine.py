@@ -12,9 +12,18 @@ from datetime import datetime, timedelta, timezone
 from decimal import Decimal
 from unittest.mock import MagicMock
 
+import numpy as np
 import pytest
+import torch
 
-from src.analytics_engine.anomaly_detector import analyze_event_anomaly
+from src.analytics_engine.anomaly_detector import (
+    HybridAnomalyDetector,
+    analyze_event_anomaly,
+    analyze_rule_based_anomaly,
+    calculate_dynamic_threshold,
+    get_detector,
+    reset_detector_state,
+)
 from src.analytics_engine.handler import (
     decode_stream_payload,
     evaluate_telemetry_decay,
@@ -320,3 +329,247 @@ def test_lambda_handler_quarantine_batch(mock_cloudwatch_logs_payload: dict, bas
     assert body["records_processed"] == 1
     assert body["quarantine_triggers_count"] == 1
     assert body["quarantine_triggers"][0]["status"] == "IDLE_EXPIRED"
+
+
+# ------------------------------------------------------------------------------
+# 6. Phase 3: LSTM Inference Pipeline, Dynamic Thresholds & Hybrid Fallback
+# ------------------------------------------------------------------------------
+
+def test_lstm_inference_pipeline_real_time_jit_request():
+    """Verifies that a benign real-time JIT lease request passes through LSTM inference."""
+    reset_detector_state()
+    jit_request = {
+        "service_id": "srv-prod-worker-01",
+        "requested_action": "state:read",
+        "target_role_arn": "arn:aws:iam::123456789012:role/aela-dev-base-service-role",
+        "resource_arn": "arn:aws:dynamodb:us-east-1:123456789012:table/aela-state",
+        "source_ip": "10.0.1.25",
+        "user_agent": "AELA-Client/1.0",
+        "lease_duration_sec": 300.0,
+        "request_interval_sec": 15.0,
+        "rolling_frequency_60s": 2.0,
+    }
+
+    result = analyze_event_anomaly(jit_request)
+
+    assert result.is_anomaly is False
+    assert result.risk_level == "NONE"
+    assert result.detection_source == "LSTM_INFERENCE"
+    assert 0.0 <= result.anomaly_score < 0.50
+    assert result.threshold_applied >= 0.15
+
+
+def test_lstm_inference_pipeline_anomalous_burst():
+    """Verifies that an anomalous high-risk burst JIT request triggers anomaly detection."""
+    reset_detector_state()
+    anomalous_request = {
+        "service_id": "srv-unknown-attacker",
+        "requested_action": "AttachRolePolicy",
+        "target_role_arn": "arn:aws:iam::123456789012:role/Admin",
+        "resource_arn": "arn:aws:iam::123456789012:policy/AdministratorAccess",
+        "source_ip": "198.51.100.77",
+        "user_agent": "sqlmap/1.6",
+        "lease_duration_sec": 3600.0,
+        "request_interval_sec": 0.05,
+        "rolling_frequency_60s": 50.0,
+        "error_code": "AccessDenied",
+    }
+
+    result = analyze_event_anomaly(anomalous_request)
+
+    assert result.is_anomaly is True
+    assert result.risk_level in ("HIGH", "CRITICAL")
+    assert result.detection_source in ("HYBRID_ENSEMBLE", "LSTM_INFERENCE")
+    assert result.anomaly_score > 0.50
+
+
+def test_dynamic_threshold_adjustments():
+    """Verifies context-aware dynamic threshold lowering for elevated risk factors."""
+    # 1. Baseline normal event
+    base_record = {
+        "resource_arn": "arn:aws:s3:::standard-bucket/object",
+        "source_ip": "10.0.1.5",
+        "rolling_frequency_60s": 1.0,
+    }
+    th_base = calculate_dynamic_threshold(base_record, base_threshold=0.50)
+    assert th_base == 0.50
+
+    # 2. Sensitive resource drops threshold by 0.15
+    sensitive_record = dict(base_record)
+    sensitive_record["resource_arn"] = "arn:aws:iam::123456789012:role/Admin"
+    th_sens = calculate_dynamic_threshold(sensitive_record, base_threshold=0.50)
+    assert th_sens < th_base
+    assert th_sens == 0.35
+
+    # 3. External IP drops threshold by additional 0.10
+    external_record = dict(sensitive_record)
+    external_record["source_ip"] = "203.0.113.10"
+    th_ext = calculate_dynamic_threshold(external_record, base_threshold=0.50)
+    assert th_ext == 0.25
+
+    # 4. Burst traffic drops threshold further
+    burst_record = dict(external_record)
+    burst_record["rolling_frequency_60s"] = 35.0
+    th_burst = calculate_dynamic_threshold(burst_record, base_threshold=0.50)
+    assert th_burst == 0.15  # Clamped to min bound 0.15
+
+
+def test_hybrid_secondary_validation_layer_override_on_uncertain_score():
+    """
+    Verifies that if the LSTM model produces a sub-threshold / uncertain score (e.g. 0.18),
+    the secondary rule-based defense layer overrides the decision and quarantines critical attacks.
+    """
+    detector = get_detector()
+    mock_model = MagicMock()
+    # Force the model to return a sub-threshold benign score
+    mock_model.predict_proba.return_value = torch.tensor([[0.18]])
+    orig_model = detector.model
+    detector.model = mock_model
+
+    try:
+        critical_event = CloudTrailEvent(
+            event_id="evt-override-test",
+            event_time=datetime.now(timezone.utc),
+            event_source="iam.amazonaws.com",
+            event_name="AttachRolePolicy",
+            principal_id="attacker-principal",
+            arn="arn:aws:iam::123456789012:role/target",
+            service_id="target-service",
+        )
+
+        result = detector.evaluate(critical_event)
+
+        # Even though LSTM gave 0.18, secondary validation catches the IAM mutation
+        assert result.is_anomaly is True
+        assert result.risk_level == "CRITICAL"
+        assert result.anomaly_type == "PRIVILEGE_ESCALATION_ATTEMPT"
+        assert result.detection_source == "HYBRID_OVERRIDE"
+        assert result.anomaly_score == 0.18
+        assert "Rule-based safety net flagged" in result.details
+    finally:
+        detector.model = orig_model
+
+
+def test_rule_based_fallback_on_model_runtime_error():
+    """
+    Verifies fault-tolerance: If PyTorch raises a RuntimeError (OOM, device failure),
+    the engine seamlessly falls back to pure rule-based evaluation without crashing.
+    """
+    detector = get_detector()
+    mock_model = MagicMock()
+    mock_model.predict_proba.side_effect = RuntimeError("Simulated GPU/CPU Out of Memory Exception")
+    orig_model = detector.model
+    detector.model = mock_model
+
+    try:
+        # 1. Malicious event with network tampering
+        tamper_event = CloudTrailEvent(
+            event_id="evt-fb-tamper",
+            event_time=datetime.now(timezone.utc),
+            event_source="ec2.amazonaws.com",
+            event_name="AuthorizeSecurityGroupIngress",
+            principal_id="compromised-worker",
+            arn="arn:aws:iam::123:role/worker",
+            service_id="worker-node",
+        )
+
+        result = detector.evaluate(tamper_event)
+
+        assert result.is_anomaly is True
+        assert result.risk_level == "HIGH"
+        assert result.anomaly_type == "NETWORK_ISOLATION_TAMPERING"
+        assert result.detection_source == "RULE_BASED_FALLBACK"
+        assert "FALLBACK ON ERROR: RuntimeError" in result.details
+
+        # 2. Benign event under error fallback
+        benign_event = CloudTrailEvent(
+            event_id="evt-fb-benign",
+            event_time=datetime.now(timezone.utc),
+            event_source="ec2.amazonaws.com",
+            event_name="DescribeInstances",
+            principal_id="worker-1",
+            arn="arn:aws:iam::123:role/worker",
+            service_id="worker-node",
+        )
+
+        result_benign = detector.evaluate(benign_event)
+        assert result_benign.is_anomaly is False
+        assert result_benign.detection_source == "RULE_BASED_FALLBACK"
+    finally:
+        detector.model = orig_model
+
+
+def test_rule_based_fallback_on_unloaded_model():
+    """Verifies that an uninitialized detector operates strictly in fallback mode."""
+    detector = HybridAnomalyDetector(model_path="non_existent_model_file.pth", auto_load=True)
+    assert detector.is_model_loaded is False
+
+    event = CloudTrailEvent(
+        event_id="evt-unloaded",
+        event_time=datetime.now(timezone.utc),
+        event_source="s3.amazonaws.com",
+        event_name="GetObject",
+        principal_id="user1",
+        arn="arn:aws:iam::123:role/worker",
+        service_id="worker-node",
+        error_code="AccessDenied",
+    )
+
+    result = detector.evaluate(event)
+    assert result.is_anomaly is True
+    assert result.risk_level == "HIGH"
+    assert result.detection_source == "RULE_BASED_FALLBACK"
+    assert "[FALLBACK MODE]" in result.details
+
+
+def test_rule_based_fallback_on_corrupted_nan_model_output():
+    """Verifies that if the model returns NaN or Inf, the fallback activates."""
+    detector = get_detector()
+    mock_model = MagicMock()
+    mock_model.predict_proba.return_value = torch.tensor([[float("nan")]])
+    orig_model = detector.model
+    detector.model = mock_model
+
+    try:
+        event = CloudTrailEvent(
+            event_id="evt-nan",
+            event_time=datetime.now(timezone.utc),
+            event_source="iam.amazonaws.com",
+            event_name="PutRolePolicy",
+            principal_id="attacker",
+            arn="arn:aws:iam::123:role/admin",
+            service_id="admin-service",
+        )
+
+        result = detector.evaluate(event)
+        assert result.is_anomaly is True
+        assert result.risk_level == "CRITICAL"
+        assert result.detection_source == "RULE_BASED_FALLBACK"
+        assert "FALLBACK ON ERROR: ValueError" in result.details
+    finally:
+        detector.model = orig_model
+
+
+def test_rolling_sequence_buffer_and_padding():
+    """Verifies rolling sequence buffering, left-padding on warm-up, and max sequence length."""
+    detector = get_detector()
+    detector.reset_buffer()
+
+    service_id = "test-rolling-svc"
+    dummy_vec = np.zeros(16, dtype=np.float32)
+
+    # 1. Warm-up with single event (padding replicates to length 10)
+    tensor1 = detector._prepare_sequence_tensor(service_id, dummy_vec)
+    assert tensor1.shape == (1, 10, 16)
+    assert len(detector._sequence_buffers[service_id]) == 1
+
+    # 2. Add 11 more events (buffer should cap at 10)
+    for i in range(11):
+        vec = np.ones(16, dtype=np.float32) * (i + 1)
+        tensor_n = detector._prepare_sequence_tensor(service_id, vec)
+        assert tensor_n.shape == (1, 10, 16)
+
+    assert len(detector._sequence_buffers[service_id]) == 10
+    # Most recent vector should match the 11th added vector
+    assert detector._sequence_buffers[service_id][-1][0] == 11.0
+

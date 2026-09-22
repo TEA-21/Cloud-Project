@@ -1,0 +1,21 @@
+{
+  "feature_names": [
+    "request_interval_sec",
+    "rolling_frequency_60s",
+    "lease_duration_sec",
+    "resource_sensitivity_score"
+  ],
+  "min_vals": {
+    "request_interval_sec": 0.10202459326258118,
+    "rolling_frequency_60s": 1.0,
+    "lease_duration_sec": 300.0,
+    "resource_sensitivity_score": 0.1
+  },
+  "max_vals": {
+    "request_interval_sec": 351.82218598532734,
+    "rolling_frequency_60s": 7.0,
+    "lease_duration_sec": 3600.0,
+    "resource_sensitivity_score": 1.0
+  },
+  "is_fitted": true
+}
