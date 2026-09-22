@@ -14,15 +14,24 @@ import {
   Network,
   CheckCircle2,
   ChevronDown,
-  ChevronUp
+  ChevronUp,
+  X,
+  ShieldCheck
 } from 'lucide-react';
 
 export default function AccessLeasesPage({ onInspectLease, onRevokeRequest }) {
-  const { sessions, revocationLogs } = useSecurity();
+  const { sessions, revocationLogs, requestJitLease } = useSecurity();
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('ALL');
   const [copiedId, setCopiedId] = useState(null);
   const [expandedLogId, setExpandedLogId] = useState(null);
+  const [isGrantModalOpen, setIsGrantModalOpen] = useState(false);
+  const [isMinting, setIsMinting] = useState(false);
+  const [leaseForm, setLeaseForm] = useState({
+    serviceId: 'srv-prod-ingress-worker-02',
+    requestedAction: 'state:read',
+    resourceArn: 'arn:aws:dynamodb:us-east-1:123456789012:table/AppLedger'
+  });
 
   const formatCountdown = (seconds) => {
     if (seconds <= 0) return '00:00 (Expired)';
@@ -51,6 +60,21 @@ export default function AccessLeasesPage({ onInspectLease, onRevokeRequest }) {
     return true;
   });
 
+  const handleMintSubmit = async (e) => {
+    e.preventDefault();
+    setIsMinting(true);
+    try {
+      await requestJitLease({
+        serviceId: leaseForm.serviceId,
+        requestedAction: leaseForm.requestedAction,
+        resourceArn: leaseForm.resourceArn
+      });
+      setIsGrantModalOpen(false);
+    } finally {
+      setIsMinting(false);
+    }
+  };
+
   const vectorStats = [
     { name: 'SSRF & Metadata Probing', count: 2, percentage: 48, color: 'bg-rose-500' },
     { name: 'Privilege Escalation Attempts', count: 1, percentage: 32, color: 'bg-amber-500' },
@@ -70,8 +94,16 @@ export default function AccessLeasesPage({ onInspectLease, onRevokeRequest }) {
           </p>
         </div>
 
-        {/* Filter & Search Bar */}
+        {/* Filter, Search Bar & Mint Action */}
         <div className="flex flex-wrap items-center gap-2">
+          <button
+            onClick={() => setIsGrantModalOpen(true)}
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-[#5B58F5] hover:bg-[#4F46E5] text-white text-xs font-semibold rounded-lg shadow-xs transition-colors"
+          >
+            <Plus className="w-3.5 h-3.5" />
+            <span>Mint JIT Lease</span>
+          </button>
+
           <div className="relative">
             <Search className="w-3.5 h-3.5 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
             <input
@@ -79,7 +111,7 @@ export default function AccessLeasesPage({ onInspectLease, onRevokeRequest }) {
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Search identity, ARN or IP..."
-              className="bg-white border border-gray-200 text-gray-900 text-xs rounded-lg pl-9 pr-3 py-1.5 focus:outline-none focus:border-[#5B58F5] w-52 shadow-2xs"
+              className="bg-white border border-gray-200 text-gray-900 text-xs rounded-lg pl-9 pr-3 py-1.5 focus:outline-none focus:border-[#5B58F5] w-48 shadow-2xs"
             />
           </div>
 
@@ -281,6 +313,95 @@ export default function AccessLeasesPage({ onInspectLease, onRevokeRequest }) {
           </div>
         </div>
       </div>
+
+      {/* Interactive JIT Lease Minting Modal */}
+      {isGrantModalOpen && (
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-xs z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-xl shadow-2xl border border-gray-200 w-full max-w-md overflow-hidden animate-in fade-in duration-200">
+            <div className="p-4 border-b border-gray-200 flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-lg bg-[#EEEDFE] text-[#5B58F5] flex items-center justify-center">
+                  <Key className="w-4 h-4" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-semibold text-gray-900">Request Ephemeral JIT Lease</h3>
+                  <p className="text-[11px] text-gray-500">Mints dynamic 300s least-privilege STS credentials via backend.</p>
+                </div>
+              </div>
+              <button 
+                onClick={() => setIsGrantModalOpen(false)}
+                className="text-gray-400 hover:text-gray-600 p-1 rounded-md"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <form onSubmit={handleMintSubmit} className="p-5 space-y-4 text-xs">
+              <div>
+                <label className="block font-medium text-gray-700 mb-1">Microservice / Identity ID</label>
+                <input
+                  type="text"
+                  required
+                  value={leaseForm.serviceId}
+                  onChange={(e) => setLeaseForm({ ...leaseForm, serviceId: e.target.value })}
+                  placeholder="e.g. srv-prod-ingress-worker-02"
+                  className="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-gray-900 focus:outline-none focus:border-[#5B58F5]"
+                />
+              </div>
+
+              <div>
+                <label className="block font-medium text-gray-700 mb-1">Requested Scoped Action</label>
+                <select
+                  value={leaseForm.requestedAction}
+                  onChange={(e) => setLeaseForm({ ...leaseForm, requestedAction: e.target.value })}
+                  className="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-gray-900 focus:outline-none focus:border-[#5B58F5]"
+                >
+                  <option value="state:read">state:read (dynamodb:GetItem, dynamodb:Query)</option>
+                  <option value="state:write">state:write (dynamodb:PutItem, dynamodb:UpdateItem)</option>
+                  <option value="storage:read">storage:read (s3:GetObject, s3:ListBucket)</option>
+                  <option value="storage:write">storage:write (s3:PutObject)</option>
+                  <option value="telemetry:write">telemetry:write (logs:CreateLogStream, logs:PutLogEvents)</option>
+                  <option value="compute:describe">compute:describe (ec2:DescribeInstances, ec2:DescribeTags)</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block font-medium text-gray-700 mb-1">Target Resource ARN</label>
+                <input
+                  type="text"
+                  required
+                  value={leaseForm.resourceArn}
+                  onChange={(e) => setLeaseForm({ ...leaseForm, resourceArn: e.target.value })}
+                  placeholder="arn:aws:dynamodb:..."
+                  className="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-gray-900 focus:outline-none focus:border-[#5B58F5] font-mono text-[11px]"
+                />
+              </div>
+
+              <div className="bg-[#EEEDFE]/40 border border-[#5B58F5]/20 rounded-lg p-3 text-[11px] text-gray-600 flex items-start gap-2">
+                <ShieldCheck className="w-4 h-4 text-[#5B58F5] shrink-0 mt-0.5" />
+                <span>Enforces strict zero-standing privilege. Lease auto-expires in 300 seconds.</span>
+              </div>
+
+              <div className="pt-2 flex items-center justify-end gap-2 border-t border-gray-100">
+                <button
+                  type="button"
+                  onClick={() => setIsGrantModalOpen(false)}
+                  className="px-3 py-1.5 border border-gray-200 text-gray-700 rounded-lg hover:bg-gray-50 font-medium"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={isMinting}
+                  className="px-4 py-1.5 bg-[#5B58F5] hover:bg-[#4F46E5] text-white rounded-lg font-semibold flex items-center gap-1.5 shadow-xs disabled:opacity-50"
+                >
+                  {isMinting ? 'Minting...' : 'Mint Ephemeral Lease'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

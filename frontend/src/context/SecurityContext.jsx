@@ -123,15 +123,109 @@ export function SecurityProvider({ children }) {
     return () => clearInterval(sseInterval);
   }, [isStreaming]);
 
-  // Action: Revoke session immediately
-  const revokeSessionNow = useCallback((sessionId, reason = 'Operator manual revocation') => {
+  // Engine health polling via Vite proxy (/api/health)
+  useEffect(() => {
+    let isMounted = true;
+    const checkHealth = async () => {
+      try {
+        const res = await fetch('/api/health');
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const data = await res.json();
+        if (isMounted) {
+          if (data.status === 'UP') {
+            setStreamHealth('Operational');
+          } else {
+            setStreamHealth('Degraded');
+          }
+        }
+      } catch (err) {
+        console.error('[AELA Health Check] Mock server unreachable:', err);
+        if (isMounted) {
+          setStreamHealth('Degraded');
+        }
+      }
+    };
+
+    checkHealth();
+    const interval = setInterval(checkHealth, 10000);
+    return () => {
+      isMounted = false;
+      clearInterval(interval);
+    };
+  }, []);
+
+  // Action: Request new JIT lease via backend API (POST /api/jit/lease)
+  const requestJitLease = useCallback(async ({
+    serviceId = 'srv-prod-ingress-worker-02',
+    requestedAction = 'state:read',
+    targetRoleArn = 'arn:aws:iam::123456789012:role/aela-dev-base-service-role',
+    resourceArn = 'arn:aws:dynamodb:us-east-1:123456789012:table/AppLedger',
+    resourceName = 'DynamoDB AppLedger Lease'
+  } = {}) => {
+    try {
+      const res = await fetch('/api/jit/lease', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          service_id: serviceId,
+          requested_action: requestedAction,
+          target_role_arn: targetRoleArn,
+          resource_arn: resourceArn
+        })
+      });
+
+      if (!res.ok) {
+        const errorText = await res.text();
+        throw new Error(`HTTP ${res.status}: ${errorText || res.statusText}`);
+      }
+
+      const data = await res.json();
+
+      const newSession = {
+        sessionId: `sess_${Date.now().toString(36)}_${Math.random().toString(36).substring(2, 6)}`,
+        entityId: data.service_id || serviceId,
+        displayName: `${serviceId.replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase())}`,
+        roleArn: targetRoleArn,
+        targetResource: resourceArn,
+        resourceName: resourceName,
+        status: 'ACTIVE',
+        ttlRemaining: data.lease_duration_seconds || 300,
+        maxTtl: 300,
+        srcIp: '10.240.14.92',
+        actionScope: Array.isArray(data.scoped_policy?.Statement?.[0]?.Action)
+          ? data.scoped_policy.Statement[0].Action.join(', ')
+          : (data.requested_action || 'state:read'),
+        credentials: data.credentials,
+        scopedPolicy: data.scoped_policy
+      };
+
+      setSessions(prev => [newSession, ...prev]);
+      setMetrics(m => ({ ...m, activeLeaseCount: m.activeLeaseCount + 1 }));
+      addAlert('SUCCESS', 'JIT Lease Granted', `Minted 300s ephemeral STS credentials for ${serviceId} [${requestedAction}].`);
+      return { success: true, data: newSession };
+    } catch (err) {
+      console.error('[AELA JIT Lease] Network request failed:', err);
+      addAlert('CRITICAL', 'JIT Grant Failed', `Failed to mint STS credentials: ${err.message}`);
+      return { success: false, error: err.message };
+    }
+  }, [addAlert]);
+
+  // Action: Revoke session immediately via backend Step Functions simulation (POST /api/quarantine/trigger)
+  const revokeSessionNow = useCallback(async (sessionId, reason = 'Operator manual revocation') => {
     let affectedPrincipal = sessionId;
     let targetRole = 'arn:aws:iam::123456789012:role/TargetRole';
+    const targetSession = sessions.find(s => s.sessionId === sessionId || s.entityId === sessionId);
+    if (targetSession) {
+      affectedPrincipal = targetSession.displayName || targetSession.entityId;
+      targetRole = targetSession.roleArn;
+    }
 
+    const roleName = targetRole.includes('/') ? targetRole.split('/').pop() : targetRole;
+    const serviceId = targetSession?.entityId || sessionId;
+
+    // Optimistically update local session state
     setSessions(prev => prev.map(s => {
       if (s.sessionId === sessionId || s.entityId === sessionId) {
-        affectedPrincipal = s.displayName || s.entityId;
-        targetRole = s.roleArn;
         return {
           ...s,
           ttlRemaining: 0,
@@ -149,28 +243,69 @@ export function SecurityProvider({ children }) {
       return node;
     }));
 
-    // Append to enforcement activity timeline
-    const newLog = {
-      id: `rev_log_${Date.now()}`,
-      timestamp: new Date().toISOString(),
-      targetRole,
-      entityName: affectedPrincipal,
-      entityId: sessionId,
-      eventType: 'Step Functions Enforcement',
-      reason,
-      stepFunctionArn: `arn:aws:states:us-east-1:123456789012:stateMachine:RevocationWorkflow:exec-${Math.random().toString(36).substr(2, 6)}`,
-      enforcementPolicy: 'ExplicitAbsoluteDenyAll',
-      status: 'Completed'
-    };
+    try {
+      const res = await fetch('/api/quarantine/trigger', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          service_id: serviceId,
+          role_name: roleName,
+          target_policy_arn: 'arn:aws:iam::123:policy/base',
+          deny_policy_arn: 'arn:aws:iam::123:policy/deny',
+          reason
+        })
+      });
 
-    setRevocationLogs(prev => [newLog, ...prev]);
-    setMetrics(m => ({ ...m, quarantineTotal: m.quarantineTotal + 1, aggregateThreatIndex: 0.35 }));
+      if (!res.ok) {
+        const errText = await res.text();
+        throw new Error(`HTTP ${res.status}: ${errText}`);
+      }
 
-    // Mark related anomaly as resolved
-    setAnomalies(prev => prev.filter(a => a.entityId !== sessionId && a.title !== sessionId));
+      const data = await res.json();
 
-    addAlert('SUCCESS', 'Identity quarantined', `${affectedPrincipal} had credentials revoked and ExplicitAbsoluteDenyAll attached.`);
-  }, [addAlert]);
+      // Append live Step Functions execution record to enforcement activity timeline
+      const newLog = {
+        id: `rev_log_${Date.now()}`,
+        timestamp: data.timestamp || new Date().toISOString(),
+        targetRole,
+        entityName: affectedPrincipal,
+        entityId: serviceId,
+        eventType: 'Step Functions Enforcement',
+        reason: data.quarantine_reason || reason,
+        stepFunctionArn: data.execution_arn || `arn:aws:states:us-east-1:123456789012:execution:aela-dev-revocation-workflow:exec-${serviceId}`,
+        enforcementPolicy: 'ExplicitAbsoluteDenyAll',
+        status: 'Completed'
+      };
+
+      setRevocationLogs(prev => [newLog, ...prev]);
+      setMetrics(m => ({ ...m, quarantineTotal: m.quarantineTotal + 1, aggregateThreatIndex: 0.35 }));
+
+      // Mark related anomaly as resolved
+      setAnomalies(prev => prev.filter(a => a.entityId !== sessionId && a.title !== sessionId));
+
+      addAlert('SUCCESS', 'Identity quarantined', `${affectedPrincipal} had credentials revoked and ExplicitAbsoluteDenyAll attached.`);
+      return { success: true, data };
+    } catch (err) {
+      console.error('[AELA Quarantine Trigger] Network request failed:', err);
+      addAlert('CRITICAL', 'Quarantine API Error', `Failed to execute Step Functions quarantine: ${err.message}`);
+
+      // Graceful fallback timeline entry
+      const fallbackLog = {
+        id: `rev_log_err_${Date.now()}`,
+        timestamp: new Date().toISOString(),
+        targetRole,
+        entityName: affectedPrincipal,
+        entityId: serviceId,
+        eventType: 'Quarantine Dispatched (Degraded)',
+        reason: `${reason} [Local fallback: ${err.message}]`,
+        stepFunctionArn: 'arn:aws:states:local:offline-fallback',
+        enforcementPolicy: 'ExplicitAbsoluteDenyAll',
+        status: 'Degraded'
+      };
+      setRevocationLogs(prev => [fallbackLog, ...prev]);
+      return { success: false, error: err.message };
+    }
+  }, [sessions, addAlert]);
 
   // Action: Extend session TTL
   const extendSession = useCallback((sessionId, addSeconds = 120) => {
@@ -257,6 +392,7 @@ export function SecurityProvider({ children }) {
         activeAlerts,
         isStreaming,
         streamHealth,
+        requestJitLease,
         revokeSessionNow,
         extendSession,
         dismissAnomaly,

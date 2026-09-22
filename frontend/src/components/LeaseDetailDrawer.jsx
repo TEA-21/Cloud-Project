@@ -17,17 +17,21 @@ export default function LeaseDetailDrawer({ session, onClose, onRevokeRequest })
 
   const isRevoked = session.status === 'REVOKED';
 
-  const mockPolicyDocument = {
+  const actionList = session.actionScope
+    ? (typeof session.actionScope === 'string' ? session.actionScope.split(',').map(s => s.trim()) : session.actionScope)
+    : (session.scopedPolicy?.Statement?.[0]?.Action || ['dynamodb:GetItem', 'dynamodb:Query']);
+
+  const policyDocument = session.scopedPolicy || {
     Version: "2012-10-17",
     Statement: [
       {
         Sid: "AELAEphemeralScopedLease",
         Effect: "Allow",
-        Action: session.actionScope.split(',').map(s => s.trim()),
-        Resource: [session.targetResource],
+        Action: actionList,
+        Resource: [session.targetResource || "*"],
         Condition: {
           IpAddress: {
-            "aws:SourceIp": session.srcIp
+            "aws:SourceIp": session.srcIp || "10.240.0.0/16"
           },
           NumericLessThanEquals: {
             "aws:MultiFactorAuthAge": 3600
@@ -108,20 +112,20 @@ export default function LeaseDetailDrawer({ session, onClose, onRevokeRequest })
               <div>
                 <div className="flex items-center justify-between mb-1">
                   <span className="text-gray-500">Scoped IAM Session Policy</span>
-                  <button
-                    onClick={() => handleCopy(JSON.stringify(mockPolicyDocument, null, 2), 'policy')}
-                    className="text-[11px] text-[#5B58F5] hover:underline flex items-center gap-1"
-                  >
-                    {copiedKey === 'policy' ? (
-                      <span className="text-emerald-600 flex items-center gap-1"><Check className="w-3 h-3" /> Copied</span>
-                    ) : (
-                      <span className="flex items-center gap-1"><Copy className="w-3 h-3" /> Copy JSON</span>
-                    )}
-                  </button>
-                </div>
-                <pre className="bg-gray-900 text-gray-100 p-3 rounded-lg text-[10px] font-mono overflow-x-auto max-h-48 border border-gray-800">
-                  {JSON.stringify(mockPolicyDocument, null, 2)}
-                </pre>
+                    <button
+                      onClick={() => handleCopy(JSON.stringify(policyDocument, null, 2), 'policy')}
+                      className="text-gray-400 hover:text-gray-600 font-sans"
+                    >
+                      {copiedKey === 'policy' ? (
+                        <span className="text-emerald-600 flex items-center gap-1"><Check className="w-3 h-3" /> Copied</span>
+                      ) : (
+                        <span className="flex items-center gap-1"><Copy className="w-3 h-3" /> Copy JSON</span>
+                      )}
+                    </button>
+                  </div>
+                  <pre className="bg-gray-900 text-gray-100 p-3 rounded-lg text-[10px] font-mono overflow-x-auto max-h-48 border border-gray-800">
+                    {JSON.stringify(policyDocument, null, 2)}
+                  </pre>
               </div>
             </div>
           </div>
